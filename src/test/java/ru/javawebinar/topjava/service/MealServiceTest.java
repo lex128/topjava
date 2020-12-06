@@ -1,7 +1,11 @@
 package ru.javawebinar.topjava.service;
 
-import org.junit.Test;
+import org.junit.*;
+import org.junit.rules.ExternalResource;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.test.context.ContextConfiguration;
@@ -26,6 +30,40 @@ import static ru.javawebinar.topjava.UserTestData.USER_ID;
 @RunWith(SpringRunner.class)
 @Sql(scripts = "classpath:db/populateDB.sql", config = @SqlConfig(encoding = "UTF-8"))
 public class MealServiceTest {
+
+    private static final Logger log = LoggerFactory.getLogger(MealServiceTest.class);
+    private static StringBuilder elapsedFullMsg;
+    private static long start;
+
+    @Rule
+    public TestName name = new TestName();
+
+    @ClassRule
+    public static final ExternalResource resource = new ExternalResource() {
+        @Override
+        protected void before() {
+            elapsedFullMsg = new StringBuilder();
+        }
+
+        @Override
+        protected void after() {
+            log.info("\nСводка времени выполнения:" + elapsedFullMsg.toString());
+        }
+    };
+
+    @Before
+    public void before() {
+        start = System.nanoTime();
+    }
+
+    @After
+    public void after() {
+        long finish = System.nanoTime();
+        long elapsed = finish - start;
+        String elapsedMsg = String.format("\n\t%-23s — %dмс", name.getMethodName(), elapsed / 1000000);
+        log.info("\nВремя выполнения:" + elapsedMsg);
+        elapsedFullMsg.append(elapsedMsg);
+    }
 
     @Autowired
     private MealService service;
@@ -59,7 +97,8 @@ public class MealServiceTest {
     @Test
     public void duplicateDateTimeCreate() throws Exception {
         assertThrows(DataAccessException.class, () ->
-                service.create(new Meal(null, meal1.getDateTime(), "duplicate", 100), USER_ID));
+                service.create(
+                        new Meal(null, meal1.getDateTime(), "duplicate", 100), USER_ID));
     }
 
 
